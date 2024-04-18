@@ -1,0 +1,56 @@
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# Ignore Visual Studio Code settings
+.vscode/
+
+# Ignore Visual Studio Code workspace settings
+.code-workspace
+
+# Ignore Visual Studio Code user-specific settings
+.vscode/settings.json
+
+# Ignore Visual Studio Code tasks
+.vscode/tasks.json
+
+# Ignore Visual Studio Code launch configuration
+.vscode/launch.json
+
+# Ignore Visual Studio Code extensions
+.vscode/extensions.json
+.vscode/extensions/
+
+# Ignore Visual Studio Code state
+.vscode/state/
+
+src/build/
