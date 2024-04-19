@@ -1,23 +1,17 @@
 cmake_minimum_required(VERSION 3.10)
 project(MyProject)
 
+set(CMAKE_CUDA_STANDARD 17)
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 
 
 find_package(CUDA REQUIRED)
 find_package(OpenMP REQUIRED)
 
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED True)
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O3 --use_fast_math -Xcompiler -fopenmp -w")
 
-if(OpenMP_CXX_FOUND)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-endif()
+file(GLOB cudafile "*.cu")
 
-add_executable(gemm main.cpp)
+cuda_add_executable(gemm ${cudafile})
 
-cuda_add_library(my_cuda_lib test.cu)
-target_link_libraries(my_cuda_lib ${CUDA_LIBRARIES})
-target_link_libraries(my_cuda_lib cublas)
-
-target_link_libraries(gemm my_cuda_lib)
+target_link_libraries(gemm cublas OpenMP::OpenMP_CXX ${CUDA_LIBRARIES})
