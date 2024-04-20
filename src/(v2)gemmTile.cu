@@ -19,7 +19,7 @@ __global__ void gemmTileKernel(const float * __restrict__ A, const float * __res
 
 	tsC.addOffset(offsetX, offsetY);
 
-	if ( !tsC.isVaild() ){
+	if ( !tsC.isValid() ){
 		return;
 	}
 
@@ -47,6 +47,6 @@ def_gemm(gemmTile)
 	using layoutThread = aduc::layout<4, 4>;
 	// 一个线程 4x4 数据
 	dim3 block(layoutBlock::M, layoutBlock::N);
-	dim3 grid((M - 1) / block.x + 1, (N - 1) / block.y + 1);
+	dim3 grid((M / layoutThread::M - 1) / block.x + 1, (N / layoutThread::N - 1) / block.y + 1);
 	gemmTileKernel<layoutBlock, layoutThread><<<grid, block>>>(A, B, C, alpha, beta, M, N, K);
 }

@@ -102,6 +102,7 @@ public:
 		cudaSetDevice(dev);
 		double boostFrequency = deviceProp.clockRate / 1e6;
 		double peakPerformance = boostFrequency * fp32CoresNum * 2;
+		peakPerformance_ = peakPerformance;
 		printf("  FP32 peak throughput %.3f GFLOPS\n", peakPerformance);
 		printf("\n");
 	}
@@ -136,7 +137,7 @@ public:
 		printf("  average GEMM time: %.3fms\n", millisecondsSum);
 		double GFLOPS = 2 * 1e-9 * M_ * N_ * K_ / (millisecondsSum * 1e-3);
 		printf("  average GFLOPS: %.3fGFLOPS\n", GFLOPS);
-
+		printf("  compare with peak: %.3f%\n", GFLOPS * 100.0 / peakPerformance_);
 		cudaEventDestroy(stopEvent);
 		cudaEventDestroy(startEvent);
 		cudaDeviceSynchronize();
@@ -163,6 +164,9 @@ private:
 	float alpha_, beta_;
 	int iterations_;
 	Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> HostResult_, DeviceResult_;
+
+	float peakPerformance_;
+	float cublasPerformance_;
 };
 
 class gemmCuBlas {
@@ -181,6 +185,8 @@ public:
 
 extern_gemm(gemmNaive)
 extern_gemm(gemmTile)
+extern_gemm(gemmShareMem)
+extern_gemm(gemmShareMemECG)
 
 int main(){
 	omp_set_num_threads(omp_get_num_procs());
@@ -193,4 +199,6 @@ int main(){
 	k.run(gemmCuBlas{}, "gemmCuBlas");
 	k.run(gemmNaive, "gemmNaive");
 	k.run(gemmTile, "gemmTile");
+	k.run(gemmShareMem, "gemmShareMem");
+	k.run(gemmShareMemECG, "gemmShareMemECG");
 }

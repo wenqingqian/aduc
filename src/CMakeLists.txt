@@ -15,3 +15,6 @@ file(GLOB cudafile "*.cu")
 cuda_add_executable(gemm ${cudafile})
 
 target_link_libraries(gemm cublas OpenMP::OpenMP_CXX ${CUDA_LIBRARIES})
+
+
+# cuda_add_executable 文件名不能有 : 号

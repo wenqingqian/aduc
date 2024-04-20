@@ -27,7 +27,15 @@ struct __device_builtin__ tensor2d {
 		col_offset_ += col;
 	}
 
-	CUDAF2 bool isVaild(){
+	CUDAF2 bool isRowValid(int offset = 0) const {
+		return (row_offset_ + offset) < row_size_;
+	}
+
+	CUDAF2 bool isColValid(int offset = 0) const {
+		return (col_offset_ + offset) < col_size_;
+	}
+
+	CUDAF2 bool isValid(){
 		return row_offset_ < row_size_ && col_offset_ < col_size_;
 	}
 
@@ -40,7 +48,11 @@ struct __device_builtin__ tensor2d {
 struct __device_builtin__ __builtin_align__(16) float4{
 	float data_[4];
 
-	CUDAF2 float operator[](size_t idx){
+	CUDAF2 float &operator[](size_t idx){
+		return data_[idx]; 
+	}
+
+	CUDAF2 float operator[](size_t idx) const {
 		return data_[idx];
 	}
 
