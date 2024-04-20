@@ -1,6 +1,8 @@
 #include "util.cuh"
 #include <cuda_runtime.h>
 
+// https://github.com/openmlsys/openmlsys-cuda/tree/main
+
 template < class layoutTile, class layoutBlock, class layoutThread >
 __global__ void gemmShareMemKernel(const float * __restrict__ A, const float * __restrict__ B, float *  __restrict__ C,
 	float alpha, float beta, unsigned M, unsigned N, unsigned K) 
@@ -90,6 +92,7 @@ __global__ void gemmShareMemKernel(const float * __restrict__ A, const float * _
 			for( int j2 = 0; j2 < 8; j2 ++ ){
 				#pragma unroll
 				for ( int j3 = 0; j3 < 2; j3 ++ ){
+					// 在这里直接计算alpha会更慢
 					result[j2][j3] = result[j2][j3] + fragmentB[j3] * fragmentA[j2 / 4][j2 % 4];
 				}
 			}

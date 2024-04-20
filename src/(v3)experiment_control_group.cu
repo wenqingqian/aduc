@@ -1,9 +1,8 @@
 #include "util.cuh"
 #include <cuda_runtime.h>
 
-namespace {
 template <typename layoutTile, typename layoutBlock, typename layoutThread>
-__global__ void gemmKernel(const float *__restrict__ A,
+__global__ void gemmShareMemECGKernel(const float *__restrict__ A,
                            const float *__restrict__ B, float *__restrict__ C,
                            float alpha, float beta, unsigned M, unsigned N,
                            unsigned K) {
@@ -157,7 +156,6 @@ __global__ void gemmKernel(const float *__restrict__ A,
     pC.addOffset(tileSharedIntervalA, 0);
   }
 }
-}  // namespace
 
 void gemmShareMemECG(const float *deviceAPtr, const float *deviceBPtr,
                  float *deviceCPtr, float alpha, float beta, unsigned M,
@@ -169,6 +167,6 @@ void gemmShareMemECG(const float *deviceAPtr, const float *deviceBPtr,
   dim3 block(layoutBlock::M * layoutBlock::N);
   dim3 grid((M - 1) / layoutTile::M + 1, (N - 1) / layoutTile::N + 1);
 
-  gemmKernel<layoutTile, layoutBlock, layoutThread><<<grid, block>>>(
+  gemmShareMemECGKernel<layoutTile, layoutBlock, layoutThread><<<grid, block>>>(
       deviceAPtr, deviceBPtr, deviceCPtr, alpha, beta, M, N, K);
 }
