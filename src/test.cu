@@ -186,7 +186,8 @@ public:
 extern_gemm(gemmNaive)
 extern_gemm(gemmTile)
 extern_gemm(gemmShareMem)
-extern_gemm(gemmShareMemECG)
+extern_gemm(gemmShareMemECG1)
+extern_gemm(gemmShareMemECG2)
 
 int main(){
 	omp_set_num_threads(omp_get_num_procs());
@@ -199,6 +200,7 @@ int main(){
 	k.run(gemmCuBlas{}, "gemmCuBlas");
 	k.run(gemmNaive, "gemmNaive");
 	k.run(gemmTile, "gemmTile");
+	k.run(gemmShareMemECG1, "gemmShareMemECG1");
 	k.run(gemmShareMem, "gemmShareMem");
-	k.run(gemmShareMemECG, "gemmShareMemECG");
+	k.run(gemmShareMemECG2, "gemmShareMemECG2");
 }

@@ -3,7 +3,7 @@
 
 
 template < class layoutTile, class layoutBlock, class layoutThread >
-__global__ void gemmShareMemKernel(const float * __restrict__ A, const float * __restrict__ B, float *  __restrict__ C,
+__global__ void gemmShareMemECG2Kernel(const float * __restrict__ A, const float * __restrict__ B, float *  __restrict__ C,
 	float alpha, float beta, unsigned M, unsigned N, unsigned K) 
 {
 	// 便捷起见, 不用复杂的变量来表示
@@ -24,7 +24,8 @@ __global__ void gemmShareMemKernel(const float * __restrict__ A, const float * _
 
 	constexpr aduc::float4 float4Zero{0.f,0.f,0.f,0.f};
 
-	__shared__ aduc::float4 tileA[128][4];
+	// __shared__ aduc::float4 tileA[128][4];
+	__shared__ aduc::float4 tileA[16][32];
 	__shared__ aduc::float4 tileB[16][32];
 
 	// store the global mem and move to share mem
@@ -65,7 +66,10 @@ __global__ void gemmShareMemKernel(const float * __restrict__ A, const float * _
 
 		#pragma unroll
 		for ( int j = 0; j < 2; j ++ ){
-			tileA[threadIdx.y * 4 + threadIdx.x / 4 + j * 64][threadIdx.x % 4] = bufferA[j];
+			#pragma unroll
+			for ( int k = 0; k < 4; k ++ ){
+				tileA[(threadIdx.x % 4) * 4 + k][threadIdx.y + j * 16][threadIdx.x / 4] = bufferA[j][k];
+			}
 		}
 		#pragma unroll
 		for ( int j = 0; j < 2; j ++ ){
@@ -77,10 +81,7 @@ __global__ void gemmShareMemKernel(const float * __restrict__ A, const float * _
 		for ( int j = 0; j < 16; j ++ ){
 			#pragma unroll
 			for ( int j2 = 0; j2 < 2; j2 ++ ){
-				#pragma unroll
-				for ( int j3 = 0; j3 < 4; j3 ++ ){
-					fragmentA[j2][j3] = tileA[j2 * 64 + threadIdx.y * 4 + j3][j / 4][j % 4];
-				}
+				fragmentA[j2] = tileA[j][threadIdx.y + j2 * 16];
 			}
 			#pragma unroll
 			for ( int j2 = 0; j2 < 2; j2 ++ ){
@@ -131,7 +132,7 @@ __global__ void gemmShareMemKernel(const float * __restrict__ A, const float * _
 
 }
 
-def_gemm(gemmShareMem)
+def_gemm(gemmShareMemECG2)
 {
 	using layoutTile = aduc::layout<128, 128, 16>;
 	// 一个线程块处理 128x128数据, 每个线程在v2的基础上翻一倍, 将A的列和B的行分段(16个一段)放进共享内存
@@ -141,5 +142,5 @@ def_gemm(gemmShareMem)
 	// 一个线程 4x4 数据
 	dim3 block(layoutBlock::M, layoutBlock::N);
 	dim3 grid((M - 1) / layoutTile::M + 1, (N - 1) / layoutTile::N + 1);
-	gemmShareMemKernel<layoutTile, layoutBlock, layoutThread><<<grid, block>>>(A, B, C, alpha, beta, M, N, K);
+	gemmShareMemECG2Kernel<layoutTile, layoutBlock, layoutThread><<<grid, block>>>(A, B, C, alpha, beta, M, N, K);
 }

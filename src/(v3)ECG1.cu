@@ -1,8 +1,11 @@
 #include "util.cuh"
 #include <cuda_runtime.h>
 
+// https://github.com/openmlsys/openmlsys-cuda/tree/main
+
+
 template <typename layoutTile, typename layoutBlock, typename layoutThread>
-__global__ void gemmShareMemECGKernel(const float *__restrict__ A,
+__global__ void gemmShareMemECG1Kernel(const float *__restrict__ A,
                            const float *__restrict__ B, float *__restrict__ C,
                            float alpha, float beta, unsigned M, unsigned N,
                            unsigned K) {
@@ -157,7 +160,7 @@ __global__ void gemmShareMemECGKernel(const float *__restrict__ A,
   }
 }
 
-void gemmShareMemECG(const float *deviceAPtr, const float *deviceBPtr,
+void gemmShareMemECG1(const float *deviceAPtr, const float *deviceBPtr,
                  float *deviceCPtr, float alpha, float beta, unsigned M,
                  unsigned N, unsigned K) {
   using layoutTile = aduc::layout<128, 128, 16>;
@@ -167,6 +170,6 @@ void gemmShareMemECG(const float *deviceAPtr, const float *deviceBPtr,
   dim3 block(layoutBlock::M * layoutBlock::N);
   dim3 grid((M - 1) / layoutTile::M + 1, (N - 1) / layoutTile::N + 1);
 
-  gemmShareMemECGKernel<layoutTile, layoutBlock, layoutThread><<<grid, block>>>(
+  gemmShareMemECG1Kernel<layoutTile, layoutBlock, layoutThread><<<grid, block>>>(
       deviceAPtr, deviceBPtr, deviceCPtr, alpha, beta, M, N, K);
 }
