@@ -13,16 +13,16 @@ namespace aduc{
 template < class T >
 struct __device_builtin__ tensor2d {
 	T * ptr_;
-	const size_t row_size_, col_size_;
-	size_t row_offset_{0};
-	size_t col_offset_{0};
+	const unsigned row_size_, col_size_;
+	int row_offset_{0};
+	int col_offset_{0};
 
 	template<class T2>
-	CUDAF2 tensor2d(T2* p, size_t row, size_t col):
+	CUDAF2 tensor2d(T2* p, unsigned row, unsigned col):
 		ptr_(reinterpret_cast<T*>(p)), row_size_(row), col_size_(col)
 		{}
 	
-	CUDAF2 void addOffset(size_t row, size_t col){
+	CUDAF2 void addOffset(int row, int col){
 		row_offset_ += row;
 		col_offset_ += col;
 	}
@@ -39,7 +39,7 @@ struct __device_builtin__ tensor2d {
 		return row_offset_ < row_size_ && col_offset_ < col_size_;
 	}
 
-	CUDAF2 T& operator()(size_t row, size_t col){
+	CUDAF2 T& operator()(int row, int col){
 		return ptr_[(row + row_offset_) * col_size_ + col + col_offset_];
 	}
 
@@ -48,11 +48,11 @@ struct __device_builtin__ tensor2d {
 struct __device_builtin__ __builtin_align__(16) float4{
 	float data_[4];
 
-	CUDAF2 float &operator[](size_t idx){
+	CUDAF2 float &operator[](unsigned idx){
 		return data_[idx]; 
 	}
 
-	CUDAF2 float operator[](size_t idx) const {
+	CUDAF2 float operator[](unsigned idx) const {
 		return data_[idx];
 	}
 

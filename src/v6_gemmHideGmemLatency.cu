@@ -1,6 +1,4 @@
 #include "util.cuh"
-#include <cuda_runtime.h>
-
 
 template < class layoutTile, class layoutBlock, class layoutThread >
 __global__ void gemmHideGmemLatencyKernel(const float * __restrict__ A, const float * __restrict__ B, float *  __restrict__ C,

@@ -1,7 +1,6 @@
 #include <cublas_v2.h>
 #include <stdio.h>
 #include <cuda_runtime.h>
-#define EIGEN_NO_WARNING
 #include <eigen3/Eigen/Core>
 #include <omp.h>
 #include "util.cuh"
@@ -15,7 +14,7 @@ int _ConvertSMVer2Cores(int major, int minor) {
 
     sSMtoCores nGpuArchCoresPerSM[] = {
         { 0x10,  8 }, // Tesla Generation (SM 1.0) G80 class
-        { 0x11,  8 }, // Tesla Generation (SM 1.1) G8x class
+        { 0x11,  8 }, // Tesla Generation (SM 1.1) G8x class·
         { 0x12,  8 }, // Tesla Generation (SM 1.2) G9x class
         { 0x13,  8 }, // Tesla Generation (SM 1.3) GT200 class
         { 0x20, 32 }, // Fermi Generation (SM 2.0) GF100 class
@@ -56,6 +55,9 @@ public:
 	kernel(unsigned M, unsigned N, unsigned K, float alpha, float beta, int iterations=5):
 		M_(M),N_(N),K_(K),alpha_(alpha),beta_(beta),HostResult_{M,N},DeviceResult_{M,N},iterations_(iterations)
 	{
+		cudaEventCreate(&startEvent_);
+		cudaEventCreate(&stopEvent_);
+		
 		Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> A{M, K}, B{K, N}, C{M, N};
 		A.setRandom();
 		B.setRandom();
@@ -120,19 +122,16 @@ public:
 
 	template < class FUNC >
 	void profile(FUNC && func){
-		cudaEvent_t startEvent, stopEvent;
-		cudaEventCreate(&startEvent);
-		cudaEventCreate(&stopEvent);
-
+		
 		float millisecondsSum = 0;
 		for (int i=0;i<iterations_;i++){
 			resetC();
-			cudaEventRecord(startEvent);
+			cudaEventRecord(startEvent_);
 			func(A_,B_,C_,alpha_,beta_,M_,N_,K_);
-			cudaEventRecord(stopEvent);
-			cudaEventSynchronize(stopEvent);
+			cudaEventRecord(stopEvent_);
+			cudaEventSynchronize(stopEvent_);
 			float milliseconds = 0;
-			cudaEventElapsedTime(&milliseconds, startEvent, stopEvent);
+			cudaEventElapsedTime(&milliseconds, startEvent_, stopEvent_);
 			millisecondsSum += milliseconds;
 		}
 		millisecondsSum /= 1.0*iterations_;
@@ -140,9 +139,6 @@ public:
 		double GFLOPS = 2 * 1e-9 * M_ * N_ * K_ / (millisecondsSum * 1e-3);
 		printf("  average GFLOPS: %.3fGFLOPS\n", GFLOPS);
 		printf("  compare with peak: %.3f%\n", GFLOPS * 100.0 / peakPerformance_);
-		cudaEventDestroy(stopEvent);
-		cudaEventDestroy(startEvent);
-		cudaDeviceSynchronize();
 		printf("\n");
 	}
 
@@ -161,6 +157,8 @@ public:
 	}
 
 private:
+	cudaEvent_t startEvent_, stopEvent_;
+
 	float * A_, * B_, * C_, * C_copy_;
 	unsigned M_, N_, K_;
 	float alpha_, beta_;
@@ -185,6 +183,8 @@ public:
 	}
 };
 
+
+
 extern_gemm(gemmNaive)
 extern_gemm(gemmTile)
 extern_gemm(gemmShareMem)
@@ -202,7 +202,7 @@ int main(){
 
 	unsigned M = 20*128, N = 20*128, K = 1024;
 	float alpha = 1.5, beta = 1.6;
-	kernel k(M,N,K,alpha,beta,50);
+	kernel k(M,N,K,alpha,beta,100);
 
 	k.run(gemmNaive, "gemmNaive");
 	k.run(gemmCuBlas{}, "gemmCuBlas");

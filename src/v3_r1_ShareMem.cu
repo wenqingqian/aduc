@@ -1,5 +1,4 @@
 #include "util.cuh"
-#include <cuda_runtime.h>
 
 // https://github.com/openmlsys/openmlsys-cuda/tree/main
 

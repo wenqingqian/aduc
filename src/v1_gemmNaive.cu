@@ -1,6 +1,4 @@
-#include <cuda_runtime.h>
 #include "util.cuh"
-// 166ms
 
 __global__ void gemmNaiveKernel(const float * A,const float * B, float * C,
 	float alpha, float beta, unsigned M, unsigned N,unsigned K) 
@@ -20,7 +18,6 @@ __global__ void gemmNaiveKernel(const float * A,const float * B, float * C,
 	}
 	C[m * N + n] = result;
 }
-
 
 def_gemm(gemmNaive)
 {
