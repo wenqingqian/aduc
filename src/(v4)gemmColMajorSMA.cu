@@ -3,7 +3,7 @@
 
 
 template < class layoutTile, class layoutBlock, class layoutThread >
-__global__ void gemmShareMemECG2Kernel(const float * __restrict__ A, const float * __restrict__ B, float *  __restrict__ C,
+__global__ void gemmColMajorSMAKernel(const float * __restrict__ A, const float * __restrict__ B, float *  __restrict__ C,
 	float alpha, float beta, unsigned M, unsigned N, unsigned K) 
 {
 	// 便捷起见, 不用复杂的变量来表示
@@ -13,8 +13,8 @@ __global__ void gemmShareMemECG2Kernel(const float * __restrict__ A, const float
 	const unsigned UthreadIdx = threadIdx.y * 16 + threadIdx.x;
 
 	tsA.addOffset(128 * blockIdx.x + UthreadIdx / 4, UthreadIdx % 4);
-	// tsB 我是竖着切, openmlsys好像也是横着切
-	tsB.addOffset(UthreadIdx % 16, blockIdx.y * 32 + UthreadIdx / 16);
+	// tsB 横着切
+	tsB.addOffset(UthreadIdx / 32, blockIdx.y * 32 + UthreadIdx % 32);
 
 	aduc::tensor2d<aduc::float4> tsC(C, M, N / 4);
 	tsC.addOffset(128 * blockIdx.x + threadIdx.y * 4, 32 * blockIdx.y + threadIdx.x);
@@ -32,14 +32,12 @@ __global__ void gemmShareMemECG2Kernel(const float * __restrict__ A, const float
 	aduc::float4 bufferA[2];
 	aduc::float4 bufferB[2];
 
-	// 4 float4 per thread, check these 4 f4 validation
-	// tsA's col and tsB's row are variable, so for A: check the row here and col in loops
 	bool validA[2];
 	bool validB[2];
 	#pragma unroll
 	for ( int i = 0; i < 2; i ++ ){
 		validA[i] = tsA.isRowValid(i * 64);
-		validB[i] = tsB.isColValid(i * 16);
+		validB[i] = tsB.isColValid();
 	}
 
 	// buffer: the IO-time layout, fragment: compute-time layout
@@ -59,8 +57,8 @@ __global__ void gemmShareMemECG2Kernel(const float * __restrict__ A, const float
 		}
 		#pragma unroll
 		for ( int j = 0; j < 2; j ++ ){
-			validB[j] &= tsB.isRowValid();
-			bufferB[j] = validB[j] ? tsB(0, j * 16) : float4Zero;
+			validB[j] &= tsB.isRowValid(j * 8);
+			bufferB[j] = validB[j] ? tsB(j * 8, 0) : float4Zero;
 		}
 		__syncthreads();
 
@@ -73,7 +71,7 @@ __global__ void gemmShareMemECG2Kernel(const float * __restrict__ A, const float
 		}
 		#pragma unroll
 		for ( int j = 0; j < 2; j ++ ){
-			tileB[threadIdx.x][threadIdx.y + j * 16] = bufferB[j];
+			tileB[UthreadIdx / 32 + j * 8][UthreadIdx % 32] = bufferB[j];
 		}
 		__syncthreads();
 
@@ -132,7 +130,7 @@ __global__ void gemmShareMemECG2Kernel(const float * __restrict__ A, const float
 
 }
 
-def_gemm(gemmShareMemECG2)
+def_gemm(gemmColMajorSMA)
 {
 	using layoutTile = aduc::layout<128, 128, 16>;
 	// 一个线程块处理 128x128数据, 每个线程在v2的基础上翻一倍, 将A的列和B的行分段(16个一段)放进共享内存
@@ -142,5 +140,5 @@ def_gemm(gemmShareMemECG2)
 	// 一个线程 4x4 数据
 	dim3 block(layoutBlock::M, layoutBlock::N);
 	dim3 grid((M - 1) / layoutTile::M + 1, (N - 1) / layoutTile::N + 1);
-	gemmShareMemECG2Kernel<layoutTile, layoutBlock, layoutThread><<<grid, block>>>(A, B, C, alpha, beta, M, N, K);
+	gemmColMajorSMAKernel<layoutTile, layoutBlock, layoutThread><<<grid, block>>>(A, B, C, alpha, beta, M, N, K);
 }

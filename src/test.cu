@@ -1,6 +1,7 @@
 #include <cublas_v2.h>
 #include <stdio.h>
 #include <cuda_runtime.h>
+#define EIGEN_NO_WARNING
 #include <eigen3/Eigen/Core>
 #include <omp.h>
 #include "util.cuh"
@@ -97,6 +98,7 @@ public:
 		printf("Device %d: %s\n", dev, deviceProp.name);
 		printf("  FP32 Cores Num: %d\n", fp32CoresNumPerSM);
 		printf("  SM Num: %d\n", deviceProp.multiProcessorCount);
+		printf("  ShareMemSize: %d\n", deviceProp.sharedMemPerBlock);
 		fp32CoresNum = fp32CoresNumPerSM * deviceProp.multiProcessorCount;
 	
 		cudaSetDevice(dev);
@@ -186,21 +188,31 @@ public:
 extern_gemm(gemmNaive)
 extern_gemm(gemmTile)
 extern_gemm(gemmShareMem)
-extern_gemm(gemmShareMemECG1)
-extern_gemm(gemmShareMemECG2)
+extern_gemm(r1_ShareMem)
+extern_gemm(gemmColMajorSMA)
+extern_gemm(r1_ColMajorSMA)
+extern_gemm(r1_HideSmemLatency)
+extern_gemm(gemmHideSmemLatency)
+extern_gemm(gemmHideGmemLatency)
+extern_gemm(ECGFINAL)
 
 int main(){
 	omp_set_num_threads(omp_get_num_procs());
 	printf("start proc: %d\n\n", omp_get_num_procs());
 
-	unsigned M = 2048, N = 2048, K = 1024;
+	unsigned M = 20*128, N = 20*128, K = 1024;
 	float alpha = 1.5, beta = 1.6;
-	kernel k(M,N,K,alpha,beta,10);
+	kernel k(M,N,K,alpha,beta,50);
 
-	k.run(gemmCuBlas{}, "gemmCuBlas");
 	k.run(gemmNaive, "gemmNaive");
+	k.run(gemmCuBlas{}, "gemmCuBlas");
 	k.run(gemmTile, "gemmTile");
-	k.run(gemmShareMemECG1, "gemmShareMemECG1");
+	k.run(r1_ShareMem, "r1_ShareMem");
 	k.run(gemmShareMem, "gemmShareMem");
-	k.run(gemmShareMemECG2, "gemmShareMemECG2");
+	k.run(gemmColMajorSMA, "gemmColMajorSMA");
+	k.run(r1_ColMajorSMA, "r1_ColMajorSMA");
+	k.run(r1_HideSmemLatency, "r1_HideSmemLatency");
+	k.run(gemmHideSmemLatency, "gemmHideSmemLatency");
+	k.run(gemmHideGmemLatency, "gemmHideGmemLatency");
+	k.run(ECGFINAL, "ECGFINAL");
 }

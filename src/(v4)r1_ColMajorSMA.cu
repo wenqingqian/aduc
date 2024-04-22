@@ -1,11 +1,8 @@
 #include "util.cuh"
-#include <cuda_runtime.h>
 
-// https://github.com/openmlsys/openmlsys-cuda/tree/main
-
-
+namespace {
 template <typename layoutTile, typename layoutBlock, typename layoutThread>
-__global__ void gemmShareMemECG1Kernel(const float *__restrict__ A,
+__global__ void r1_ColMajorSMAKernel(const float *__restrict__ A,
                            const float *__restrict__ B, float *__restrict__ C,
                            float alpha, float beta, unsigned M, unsigned N,
                            unsigned K) {
@@ -18,7 +15,7 @@ __global__ void gemmShareMemECG1Kernel(const float *__restrict__ A,
   constexpr unsigned blockSize = layoutBlock::M * layoutBlock::N;
   constexpr aduc::float4 float4Zero{0.f, 0.f, 0.f, 0.f};
 
-  __shared__ aduc::float4 tileA[layoutTile::M][layoutTileT::K];
+  __shared__ aduc::float4 tileA[layoutTile::K][layoutTileT::M];
   __shared__ aduc::float4 tileB[layoutTile::K][layoutTileT::N];
 
   const unsigned nInTileC = threadIdx.x % layoutBlock::M;
@@ -44,8 +41,8 @@ __global__ void gemmShareMemECG1Kernel(const float *__restrict__ A,
   constexpr unsigned tileIterationsA = tileSizeA / blockSize / ratio;
   constexpr unsigned tileGlobalIntervalA = blockSize / layoutTileT::K;
   constexpr unsigned tileComputeIterationsA = layoutTileT::M / layoutBlock::M;
-  constexpr unsigned tileSharedIntervalA =
-      layoutTile::M / tileComputeIterationsA;
+  constexpr unsigned tileSharedIntervalAT =
+      layoutTileT::M / tileComputeIterationsA;
   constexpr unsigned tileIterationsB = tileSizeB / blockSize / ratio;
   constexpr unsigned tileGlobalIntervalB = blockSize / layoutTileT::N;
   constexpr unsigned tileComputeIterationsB = layoutTileT::N / layoutBlock::N;
@@ -92,7 +89,12 @@ __global__ void gemmShareMemECG1Kernel(const float *__restrict__ A,
     __syncthreads();
 #pragma unroll
     for (unsigned a = 0; a < tileIterationsA; ++a) {
-      tileA[mInTileA + a * tileGlobalIntervalA][kInTileA] = bufferA[a];
+#pragma unroll
+      for (unsigned j = 0; j < layoutThread::M; ++j) {
+        tileA[kInTileA * ratio + j]
+             [(a * tileGlobalIntervalA + mInTileA) / ratio]
+             [(a * tileGlobalIntervalA + mInTileA) % ratio] = bufferA[a][j];
+      }
     }
 
 #pragma unroll
@@ -105,12 +107,7 @@ __global__ void gemmShareMemECG1Kernel(const float *__restrict__ A,
     for (unsigned j = 0; j < layoutTile::K; j++) {
 #pragma unroll
       for (unsigned a = 0; a < tileComputeIterationsA; ++a) {
-#pragma unroll
-        for (unsigned b = 0; b < layoutThread::M; ++b) {
-          fragmentA[a][b] =
-              tileA[a * tileSharedIntervalA + mInTileC * layoutThread::M + b]
-                   [j / ratio][j % ratio];
-        }
+        fragmentA[a] = tileA[j][a * tileSharedIntervalAT + mInTileC];
       }
 #pragma unroll
       for (unsigned a = 0; a < tileComputeIterationsB; ++a) {
@@ -156,13 +153,14 @@ __global__ void gemmShareMemECG1Kernel(const float *__restrict__ A,
         }
       }
     }
-    pC.addOffset(tileSharedIntervalA, 0);
+    pC.addOffset(tileSharedIntervalAT * ratio, 0);
   }
 }
+}  // namespace
 
-void gemmShareMemECG1(const float *deviceAPtr, const float *deviceBPtr,
-                 float *deviceCPtr, float alpha, float beta, unsigned M,
-                 unsigned N, unsigned K) {
+void r1_ColMajorSMA(const float *deviceAPtr, const float *deviceBPtr,
+                       float *deviceCPtr, float alpha, float beta, unsigned M,
+                       unsigned N, unsigned K) {
   using layoutTile = aduc::layout<128, 128, 16>;
   using layoutBlock = aduc::layout<16, 16>;
   using layoutThread = aduc::layout<4, 4>;
@@ -170,6 +168,6 @@ void gemmShareMemECG1(const float *deviceAPtr, const float *deviceBPtr,
   dim3 block(layoutBlock::M * layoutBlock::N);
   dim3 grid((M - 1) / layoutTile::M + 1, (N - 1) / layoutTile::N + 1);
 
-  gemmShareMemECG1Kernel<layoutTile, layoutBlock, layoutThread><<<grid, block>>>(
+  r1_ColMajorSMAKernel<layoutTile, layoutBlock, layoutThread><<<grid, block>>>(
       deviceAPtr, deviceBPtr, deviceCPtr, alpha, beta, M, N, K);
 }
