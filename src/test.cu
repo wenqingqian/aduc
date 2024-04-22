@@ -34,7 +34,7 @@ int _ConvertSMVer2Cores(int major, int minor) {
         { 0x72, 64 }, // Volta Generation (SM 7.2) GV10x class
         { 0x75, 64 }, // Turing Generation (SM 7.5) TU10x class
         { 0x80, 64 }, // Ampere Generation (SM 8.0) GA10x class
-        { 0x86, 64 }, // Ampere Generation (SM 8.6) GA10x class
+        { 0x86, 128 }, // Ampere Generation (SM 8.6) GA10x class
         { 0x90, 128}  // A100 Generation (SM 9.0) GA10x class
     };
 
