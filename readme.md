@@ -1,6 +1,6 @@
 %
 
-### JUMP
+### JUMP README
 
 - [sgemm](./src/sgemm/README.md)
 - [sgemv](./src/sgemv/readme)
