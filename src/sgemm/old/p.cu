@@ -54,6 +54,10 @@ __global__ void gemmHideGmemLatencyKernel(const float * __restrict__ A, const fl
 		#pragma unroll
 		for ( int k = 0; k < 4; k ++ ){
 			tileA[0][(threadIdx.x % 4) * 4 + k][threadIdx.y + j * 16][threadIdx.x / 4] = bufferA[j][k];
+			// tileA[0][UthreadIdx % 4 * 4 + k]
+			// 	 [(j * 64 + UthreadIdx / 4) / 4]
+			// 	 [(j * 64 + UthreadIdx / 4) % 4] 
+			// 	 = bufferA[j][k];
 		}
 	}
 	#pragma unroll

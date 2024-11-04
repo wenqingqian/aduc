@@ -201,7 +201,7 @@ __global__ void gemmKernel(const float *__restrict__ A,
 }
 }  // namespace
 
-void ECGFINAL(const float *deviceAPtr, const float *deviceBPtr,
+void r1_HideGmemLatency(const float *deviceAPtr, const float *deviceBPtr,
                float *deviceCPtr, float alpha, float beta, unsigned M,
                unsigned N, unsigned K) {
   using layoutTile = aduc::layout<128, 128, 16>;

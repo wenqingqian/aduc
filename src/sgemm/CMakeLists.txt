@@ -17,5 +17,11 @@ add_executable(gemm ${cudafile})
 
 target_link_libraries(gemm OpenMP::OpenMP_CXX ${CUDA_cublas_LIBRARY})
 
+if(STORE_RESULT)
+	target_compile_definitions(gemm PRIVATE -DSTORE_RESULT)
+endif()
+if(DISABLE_CPU)
+	target_compile_definitions(gemm PRIVATE -DDISABLE_CPU)
+endif()
 
 # cuda_add_executable 文件名不能有 : 号
